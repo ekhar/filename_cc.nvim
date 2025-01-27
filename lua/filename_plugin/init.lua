@@ -1,11 +1,7 @@
--- lua/filename_plugin/init.lua
-
+-- filename: lua/filename_plugin/init.lua
 local M = {}
 
 -- Attempt to extract a line-comment prefix from commentstring
--- e.g. if commentstring = "// %s", then we want "//"
--- If commentstring = "/* %s */", we might end up with "/* "
--- (which might not be truly single-line, but we'll just demonstrate the logic).
 local function get_comment_prefix()
 	local cstring = vim.api.nvim_buf_get_option(0, "commentstring")
 	-- If it's empty or just "%s", fallback to "#"
@@ -23,12 +19,36 @@ local function get_comment_prefix()
 	return "#"
 end
 
+-- Check if a file is ignored by Git via .gitignore
+local function is_file_ignored_by_git(filepath)
+	-- We call `git check-ignore <filepath>`
+	-- If the output is non-empty, it means it's matched in .gitignore
+	local output = vim.fn.systemlist("git check-ignore " .. vim.fn.shellescape(filepath))
+	return (#output > 0)
+end
+
 local function add_filename_comment()
-	-- Get the current filename
-	local filename = vim.fn.expand("%:t")
-	if filename == "" then
+	-- If the buffer doesn't have a filename yet (new, unsaved file), bail out
+	local abspath = vim.fn.expand("%:p")
+	if abspath == "" then
 		return
 	end
+
+	-- 1) If this file is ignored in .gitignore, skip
+	if is_file_ignored_by_git(abspath) then
+		return
+	end
+
+	-- 2) If the filetype does not allow comments (e.g., JSON), skip
+	--    This is a simple check.  If you have more filetypes to skip,
+	--    you could expand this logic or create a config list of them.
+	if vim.bo.filetype == "json" then
+		return
+	end
+
+	-- Derive the path relative to your current working directory (plus ~ expansion)
+	-- Adjust as needed for your workflow
+	local relpath = vim.fn.fnamemodify(vim.fn.expand("%"), ":~:.")
 
 	-- Derive the comment prefix from the commentstring
 	local token = get_comment_prefix()
@@ -40,16 +60,16 @@ local function add_filename_comment()
 	local first_line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] or ""
 
 	-- If the first line already matches the pattern, do nothing
-	if first_line:find("^" .. vim.pesc(filename_mark) .. filename) then
+	if first_line:find("^" .. vim.pesc(filename_mark) .. relpath) then
 		return
 	end
 
 	-- If we see a line with "filename:" but the wrong file name, replace it
 	if first_line:find("^" .. vim.pesc(filename_mark)) then
-		vim.api.nvim_buf_set_lines(0, 0, 1, false, { filename_mark .. filename })
+		vim.api.nvim_buf_set_lines(0, 0, 1, false, { filename_mark .. relpath })
 	else
-		-- Insert a new line at the top
-		vim.api.nvim_buf_set_lines(0, 0, 0, false, { filename_mark .. filename })
+		-- Otherwise, insert a new line at the top
+		vim.api.nvim_buf_set_lines(0, 0, 0, false, { filename_mark .. relpath })
 	end
 end
 
