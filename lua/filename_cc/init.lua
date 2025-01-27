@@ -46,6 +46,7 @@ local function should_skip_file()
 	local skip_filetypes = {
 		-- Documentation/Text formats
 		"markdown",
+		"html",
 		"text",
 		"txt",
 		"org",
