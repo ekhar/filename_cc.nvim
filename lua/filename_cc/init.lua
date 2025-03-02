@@ -53,6 +53,11 @@ local function should_skip_file()
 		"rst", -- ReStructuredText
 		"asciidoc", -- AsciiDoc
 		"tex", -- LaTeX files
+		"css",
+		"bash",
+		"sql",
+		"tf",
+		"terraform",
 
 		-- Data formats
 		"json",
