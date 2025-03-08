@@ -58,6 +58,8 @@ local function should_skip_file()
 		"sql",
 		"tf",
 		"terraform",
+		"sh",
+		"sql",
 
 		-- Data formats
 		"json",
